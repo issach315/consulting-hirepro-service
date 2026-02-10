@@ -16,7 +16,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: none                # Turn off auto-create, let Flyway handle it
+      ddl-auto: none                # Turn off auto-create; Liquibase handles schema
       dialect: org.hibernate.dialect.MySQL8Dialect
     show-sql: true
     open-in-view: false
@@ -28,11 +28,13 @@ spring:
         order_inserts: true
         order_updates: true
 
-  flyway:
+  liquibase:
     enabled: true
-    locations: classpath:db/migration   # Migration scripts folder
-    baseline-on-migrate: true           # If database already has tables
-    out-of-order: false                 # Only apply new migrations in order
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    contexts: dev
+    default-schema: ${MYSQL_DATABASE}
+    drop-first: false              # Don't drop tables before migration
+    clear-checksums: false
 
   jackson:
     serialization:
