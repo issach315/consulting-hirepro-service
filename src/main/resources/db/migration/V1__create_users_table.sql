@@ -1,0 +1,16 @@
+CREATE TABLE users (
+    user_id VARCHAR(26) PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    phone_number VARCHAR(20) UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('SUPERADMIN','ADMIN','RECRUITER','HR') NOT NULL,
+    last_login DATETIME,
+    created_by VARCHAR(26),
+    updated_by VARCHAR(26),
+    blocked_by VARCHAR(26),
+    account_status ENUM('ACTIVE','BLOCKED','INACTIVE') NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME
+);

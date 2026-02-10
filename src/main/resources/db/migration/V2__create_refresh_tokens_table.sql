@@ -1,0 +1,9 @@
+CREATE TABLE refresh_tokens (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(26) NOT NULL,
+    token VARCHAR(500) NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);

@@ -16,7 +16,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update                 # Dev: auto-create/update tables
+      ddl-auto: none                # Turn off auto-create, let Flyway handle it
       dialect: org.hibernate.dialect.MySQL8Dialect
     show-sql: true
     open-in-view: false
@@ -27,6 +27,12 @@ spring:
           time_zone: UTC
         order_inserts: true
         order_updates: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration   # Migration scripts folder
+    baseline-on-migrate: true           # If database already has tables
+    out-of-order: false                 # Only apply new migrations in order
 
   jackson:
     serialization:
@@ -41,8 +47,8 @@ server:
 
 jwt:
   secret: ${JWT_SECRET}
-  access-token-expiration: ${JWT_ACCESS_EXPIRATION}       # e.g., 900000 for 15 min
-  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION}     # e.g., 604800000 for 7 days
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION}
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION}
   issuer: hirepro-service
 
 logging:
