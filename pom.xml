@@ -88,9 +88,11 @@
 
 
 		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-core</artifactId>
-		</dependency>
+    <groupId>org.flywaydb</groupId>
+    <artifactId>flyway-core</artifactId>
+    <version>10.20.0</version> <!-- Latest stable -->
+</dependency>
+
 
 		<!-- DevTools -->
 		<dependency>
