@@ -66,7 +66,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("SUPERADMIN")
                         // Client management
-                        .requestMatchers("/clients/**").hasRole("SUPERADMIN")
+                        .requestMatchers("/api/clients/**").hasRole("SUPERADMIN")
                         // User management
                         .requestMatchers(HttpMethod.GET, "/users").hasAnyRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.POST, "/users").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
