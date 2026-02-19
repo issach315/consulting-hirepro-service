@@ -65,22 +65,35 @@ public class SecurityConfig {
                         // Actuator endpoints
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("SUPERADMIN")
-                        // Client management
-                        .requestMatchers("/clients/**").hasRole("SUPERADMIN")
-                        // User management
-                        .requestMatchers(HttpMethod.GET, "/users").hasAnyRole("SUPERADMIN")
-                        .requestMatchers(HttpMethod.POST, "/users").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/users/client/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/users/{id}").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/users/me").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/users/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/users/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
-                        // Role management
-                        .requestMatchers("/roles/**").hasRole("SUPERADMIN")
-                        // Permission management
-                        .requestMatchers("/permissions/**").hasRole("SUPERADMIN")
-                        // Reports
-                        .requestMatchers("/reports/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+
+                        // =====================
+                        // CLIENT MANAGEMENT
+                        // =====================
+                        .requestMatchers("/api/clients/**").hasRole("SUPERADMIN")
+
+                        // =====================
+                        // USER MANAGEMENT
+                        // =====================
+                        .requestMatchers(HttpMethod.GET, "/api/users").hasRole("SUPERADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/users").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/users/client/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/users/{id}").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/users/me").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/users/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+
+                        // =====================
+                        // ROLE & PERMISSION
+                        // =====================
+                        .requestMatchers("/api/roles/**").hasRole("SUPERADMIN")
+                        .requestMatchers("/api/permissions/**").hasRole("SUPERADMIN")
+
+                        // =====================
+                        // REPORTS
+                        // =====================
+                        .requestMatchers("/api/reports/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+
+                        // Any other request
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
@@ -114,17 +127,12 @@ public class SecurityConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Allow credentials (cookies / Authorization headers)
         config.setAllowCredentials(true);
-
-        // Allowed frontend origins (local + deployed)
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
                 "https://consulting-hirepro-ui-app-development.up.railway.app"
         ));
-
-        // Allowed headers
         config.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
@@ -132,17 +140,10 @@ public class SecurityConfig {
                 "Accept",
                 "Origin"
         ));
-
-        // Exposed headers (optional, for JWT)
         config.setExposedHeaders(List.of("Authorization"));
-
-        // Allowed methods
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-
-        // Preflight cache duration
         config.setMaxAge(3600L);
 
-        // Register config for all endpoints
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
 
