@@ -19,8 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 
@@ -42,10 +42,18 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
+
+                        // ✅ Always permit OPTIONS preflight requests
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // =====================
+                        // PUBLIC ENDPOINTS
+                        // Note: No /api prefix — context-path /api is already applied by server
+                        // =====================
                         .requestMatchers(
                                 "/auth/login",
                                 "/auth/register",
@@ -54,7 +62,10 @@ public class SecurityConfig {
                                 "/public/**",
                                 "/error"
                         ).permitAll()
-                        // Swagger/API docs
+
+                        // =====================
+                        // SWAGGER / API DOCS
+                        // =====================
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -62,38 +73,50 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
-                        // Actuator endpoints
+
+                        // =====================
+                        // ACTUATOR
+                        // =====================
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("SUPERADMIN")
 
                         // =====================
                         // CLIENT MANAGEMENT
+                        // ✅ Removed /api prefix — server context-path is already /api
                         // =====================
-                        .requestMatchers("/api/clients/**").hasRole("SUPERADMIN")
+                        .requestMatchers("/clients/**").hasRole("SUPERADMIN")
 
                         // =====================
                         // USER MANAGEMENT
+                        // ✅ Removed /api prefix
                         // =====================
-                        .requestMatchers(HttpMethod.GET, "/api/users").hasRole("SUPERADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/users").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/users/client/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/users/{id}").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/users/me").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/api/users/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/users").hasRole("SUPERADMIN")
+                        .requestMatchers(HttpMethod.POST, "/users").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/users/client/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/users/{id}").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/users/me").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/users/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/users/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
 
                         // =====================
                         // ROLE & PERMISSION
+                        // ✅ Removed /api prefix
                         // =====================
-                        .requestMatchers("/api/roles/**").hasRole("SUPERADMIN")
-                        .requestMatchers("/api/permissions/**").hasRole("SUPERADMIN")
+                        .requestMatchers("/roles/**").hasRole("SUPERADMIN")
+                        .requestMatchers("/permissions/**").hasRole("SUPERADMIN")
 
                         // =====================
                         // REPORTS
+                        // ✅ Removed /api prefix
                         // =====================
-                        .requestMatchers("/api/reports/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
+                        .requestMatchers("/reports/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
 
-                        // Any other request
+                        // =====================
+                        // DEBUG (remove after testing)
+                        // =====================
+                        .requestMatchers("/debug/**").authenticated()
+
+                        // Any other request must be authenticated
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
@@ -121,10 +144,10 @@ public class SecurityConfig {
     }
 
     // =========================
-    // CORS FILTER (Global)
+    // CORS (integrated with Spring Security filter chain)
     // =========================
     @Bean
-    public CorsFilter corsFilter() {
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(true);
@@ -140,13 +163,12 @@ public class SecurityConfig {
                 "Accept",
                 "Origin"
         ));
-        config.setExposedHeaders(List.of("Authorization"));
+        config.setExposedHeaders(List.of("Authorization", "Set-Cookie"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-
-        return new CorsFilter(source);
+        return source;
     }
 }
