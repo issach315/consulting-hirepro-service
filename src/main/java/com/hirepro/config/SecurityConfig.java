@@ -19,10 +19,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -43,7 +42,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers(
@@ -54,8 +54,7 @@ public class SecurityConfig {
                                 "/public/**",
                                 "/error"
                         ).permitAll()
-
-                        // Swagger/API docs (if using)
+                        // Swagger/API docs
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -63,14 +62,11 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
-
-                        // Actuator endpoints (if using)
+                        // Actuator endpoints
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("SUPERADMIN")
-
-                        // Client management - SUPERADMIN only
+                        // Client management
                         .requestMatchers("/clients/**").hasRole("SUPERADMIN")
-
                         // User management
                         .requestMatchers(HttpMethod.GET, "/users").hasAnyRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.POST, "/users").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
@@ -79,27 +75,19 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/users/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/users/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
-
                         // Role management
                         .requestMatchers("/roles/**").hasRole("SUPERADMIN")
-
                         // Permission management
                         .requestMatchers("/permissions/**").hasRole("SUPERADMIN")
-
                         // Reports
                         .requestMatchers("/reports/**").hasAnyRole("SUPERADMIN", "CLIENT_ADMIN")
-
                         .anyRequest().authenticated()
-                )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
@@ -119,23 +107,45 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // =========================
+    // CORS FILTER (Global)
+    // =========================
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+    public CorsFilter corsFilter() {
+        CorsConfiguration config = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
-        // If you also use 127.0.0.1:
-        // configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://127.0.0.1:3000"));
+        // Allow credentials (cookies / Authorization headers)
+        config.setAllowCredentials(true);
 
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
-        configuration.setExposedHeaders(List.of("Authorization"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+        // Allowed frontend origins (local + deployed)
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "https://consulting-hirepro-ui-app-development.up.railway.app"
+        ));
 
+        // Allowed headers
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "Accept",
+                "Origin"
+        ));
+
+        // Exposed headers (optional, for JWT)
+        config.setExposedHeaders(List.of("Authorization"));
+
+        // Allowed methods
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+
+        // Preflight cache duration
+        config.setMaxAge(3600L);
+
+        // Register config for all endpoints
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+        source.registerCorsConfiguration("/**", config);
 
+        return new CorsFilter(source);
+    }
 }
