@@ -16,7 +16,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: none                # Turn off auto-create; Liquibase handles schema
+      ddl-auto: none
       dialect: org.hibernate.dialect.MySQL8Dialect
     show-sql: true
     open-in-view: false
@@ -33,7 +33,7 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     contexts: dev
     default-schema: ${MYSQL_DATABASE}
-    drop-first: false              # Don't drop tables before migration
+    drop-first: false
     clear-checksums: false
 
   jackson:
@@ -53,12 +53,24 @@ jwt:
   refresh-token-expiration: ${JWT_REFRESH_EXPIRATION}
   issuer: hirepro-service
 
+# ✅ Local dev cookie settings — SameSite=Lax works on localhost
+app:
+  cookie:
+    access-token-name: accessToken
+    refresh-token-name: refreshToken
+    max-age: 3600
+    secure: false
+    http-only: true
+    same-site: Lax
+    path: /
+
 logging:
   level:
     root: INFO
     com.hirepro: DEBUG
     org.springframework.security: DEBUG
+    org.springframework.web.cors: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%level] %logger{36} - %msg%n"
