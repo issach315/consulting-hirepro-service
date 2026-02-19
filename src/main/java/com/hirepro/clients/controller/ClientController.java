@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/clients")
@@ -90,7 +91,6 @@ public class ClientController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Map<String, String> allParams) {
 
-        // Create PageRequestDto with the parameters
         PageRequestDto pageRequest = new PageRequestDto();
         pageRequest.setPage(page);
         pageRequest.setSize(size);
@@ -98,19 +98,18 @@ public class ClientController {
         pageRequest.setSortDirection(sortDirection);
         pageRequest.setSearch(search);
 
-        // Extract filter parameters (all parameters that start with "filter.")
+        // Reserved param names to skip
+        Set<String> reserved = Set.of("page", "size", "sortBy", "sortDirection", "search");
+
         if (allParams != null) {
-            for (Map.Entry<String, String> entry : allParams.entrySet()) {
-                if (entry.getKey().startsWith("filter.")) {
-                    String filterKey = entry.getKey().substring(7); // Remove "filter." prefix
-                    pageRequest.addFilter(filterKey, entry.getValue());
-                }
-            }
+            allParams.entrySet().stream()
+                    .filter(e -> e.getKey().startsWith("filter."))
+                    .forEach(e -> pageRequest.addFilter(
+                            e.getKey().substring(7), e.getValue()
+                    ));
         }
 
         PageResponseDto<ClientResponse> clients = clientService.getAllClients(pageRequest);
-        return ResponseEntity.ok(
-                ApiResponse.success("Clients retrieved successfully", clients)
-        );
+        return ResponseEntity.ok(ApiResponse.success("Clients retrieved successfully", clients));
     }
 }
