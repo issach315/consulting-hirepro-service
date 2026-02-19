@@ -1,3 +1,7 @@
 databaseChangeLog:
   - include:
-      file: classpath:db/changelog/changelog-001-create-tables.yaml
+      file: classpath:db/changelog/changelog-001-create-clients-table.yaml
+  - include:
+      file: classpath:db/changelog/changelog-002-create-auth-users-table.yaml
+  - include:
+      file: classpath:db/changelog/changelog-003-create-refresh-tokens-table.yaml

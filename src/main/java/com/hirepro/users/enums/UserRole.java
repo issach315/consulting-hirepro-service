@@ -2,10 +2,21 @@ package com.hirepro.users.enums;
 
 public enum UserRole {
     SUPERADMIN,
-    ADMIN,
-    RECRUITER,
-    HR,
-    TEAMLEAD,
+    CLIENT_ADMIN,
     BDM,
-    COORDINATOR
+    SALES_EXECUTIVE,
+    HR_MANAGER,
+    ACCOUNT_MANAGER,
+    PAYROLL_SPECIALIST,
+    RECRUITER,
+    SR_RECRUITER,
+    USIT_RECRUITER,
+    USIT_COORDINATOR,
+    TEAM_LEAD,
+    EMPLOYEE_MANAGER,
+    HR,
+    EMPLOYEE,
+    IT_SUPPORT,
+    TRAINER,
+    ONBOARDING_SPECIALIST
 }

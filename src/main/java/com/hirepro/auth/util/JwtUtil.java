@@ -1,6 +1,5 @@
 package com.hirepro.auth.util;
 
-import com.hirepro.users.enums.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -34,11 +33,11 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateAccessToken(String userId, String username, UserRole role) {
+    public String generateAccessToken(String userId, String username, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("username", username);
-        claims.put("role", role.name());
+        claims.put("role", role);
         return createToken(claims, username, accessTokenExpiration);
     }
 
