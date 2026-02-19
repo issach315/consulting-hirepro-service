@@ -1,4 +1,4 @@
-package com.hirepro.common.exception.handler;
+package com.hirepro.common.exception;
 
 import com.hirepro.common.exception.AccessDeniedException;
 import com.hirepro.common.exception.BadRequestException;
@@ -72,13 +72,14 @@ public class GlobalExceptionHandler {
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
-        ApiResponse<Map<String, String>> response = ApiResponse.error("Validation failed", errors);
+        ApiResponse<Map<String, String>> response = new ApiResponse<>(false, "Validation failed", errors);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleGlobalException(
             Exception ex, WebRequest request) {
+        // Log the exception here if needed
         ApiResponse<Object> response = ApiResponse.error("An unexpected error occurred. Please try again later.");
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }

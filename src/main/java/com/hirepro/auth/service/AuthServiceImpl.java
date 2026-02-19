@@ -10,10 +10,9 @@ import com.hirepro.common.exception.BadRequestException;
 import com.hirepro.common.exception.ResourceNotFoundException;
 import com.hirepro.common.exception.UnauthorizedException;
 import com.hirepro.common.util.UlidGenerator;
-import com.hirepro.users.dto.UserResponse;
-import com.hirepro.users.entity.User;
-import com.hirepro.users.enums.AccountStatus;
-import com.hirepro.users.repository.UserRepository;
+import com.hirepro.users.dto.AuthUserResponse;
+import com.hirepro.users.entity.AuthUser;
+import com.hirepro.users.repository.AuthUserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -27,18 +26,18 @@ import java.time.LocalDateTime;
 @Service
 public class AuthServiceImpl implements AuthService {
 
-    private final UserRepository userRepository;
+    private final AuthUserRepository authUserRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
 
-    public AuthServiceImpl(UserRepository userRepository,
+    public AuthServiceImpl(AuthUserRepository authUserRepository,
                            RefreshTokenRepository refreshTokenRepository,
                            PasswordEncoder passwordEncoder,
                            JwtUtil jwtUtil,
                            AuthenticationManager authenticationManager) {
-        this.userRepository = userRepository;
+        this.authUserRepository = authUserRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -58,26 +57,27 @@ public class AuthServiceImpl implements AuthService {
             );
 
             // Get user details
-            User user = userRepository.findByUsernameAndNotDeleted(request.getUsername())
+            AuthUser user = authUserRepository.findByEmailAndNotDeleted(request.getUsername())
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
             // Check account status
-            if (user.getAccountStatus() != AccountStatus.ACTIVE) {
-                throw new UnauthorizedException("Account is not active. Status: " + user.getAccountStatus());
+            if (!"ACTIVE".equals(user.getStatus())) {
+                throw new UnauthorizedException("Account is not active. Status: " + user.getStatus());
             }
 
             // Update last login
             user.setLastLogin(LocalDateTime.now());
-            userRepository.save(user);
+            authUserRepository.save(user);
 
             // Generate tokens
-            String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getUsername(), user.getRole());
-            String refreshToken = jwtUtil.generateRefreshToken(user.getUserId(), user.getUsername());
+            String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail(), user.getRole());
+            String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
 
             // Save refresh token
-            saveRefreshToken(user.getUserId(), refreshToken);
+            saveRefreshToken(user.getId(), refreshToken);
 
-            return new AuthResponse(accessToken, refreshToken, jwtUtil.getAccessTokenExpiration() / 1000);
+            return new AuthResponse(accessToken, refreshToken, user.getEmail(), user.getRole(),
+                    jwtUtil.getAccessTokenExpiration() / 1000);
 
         } catch (AuthenticationException e) {
             throw new UnauthorizedException("Invalid username or password");
@@ -86,35 +86,28 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public UserResponse register(RegisterRequest request) {
-        // Check if username exists
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new BadRequestException("Username already exists");
-        }
-
+    public AuthUserResponse register(RegisterRequest request) {
         // Check if email exists
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (authUserRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email already exists");
         }
 
-        // Check if phone number exists
-        if (request.getPhoneNumber() != null && userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-            throw new BadRequestException("Phone number already exists");
-        }
-
         // Create new user
-        User user = new User();
-        user.setUserId(UlidGenerator.generate());
-        user.setUsername(request.getUsername());
-        user.setPhoneNumber(request.getPhoneNumber());
+        AuthUser user = new AuthUser();
+        user.setId(UlidGenerator.generate());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(request.getRole());
-        user.setAccountStatus(AccountStatus.ACTIVE);
+        user.setRole(request.getRole().name());
+        user.setStatus("ACTIVE");
         user.setCreatedBy("SELF");
 
-        User savedUser = userRepository.save(user);
+        // Set client_id to null for SUPERADMIN
+        if ("SUPERADMIN".equals(request.getRole().name())) {
+            user.setClientId(null);
+            user.setEmployeeType(null);
+        }
 
+        AuthUser savedUser = authUserRepository.save(user);
         return mapToUserResponse(savedUser);
     }
 
@@ -126,23 +119,38 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new UnauthorizedException("Invalid or expired refresh token"));
 
         // Get user
-        User user = userRepository.findByIdAndNotDeleted(token.getUserId())
+        AuthUser user = authUserRepository.findByIdAndNotDeleted(token.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // Check account status
-        if (user.getAccountStatus() != AccountStatus.ACTIVE) {
+        if (!"ACTIVE".equals(user.getStatus())) {
             throw new UnauthorizedException("Account is not active");
         }
 
         // Generate new access token
-        String newAccessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getUsername(), user.getRole());
+        String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail(), user.getRole());
 
-        return new AuthResponse(newAccessToken, refreshToken, jwtUtil.getAccessTokenExpiration() / 1000);
+        // Optionally rotate refresh token for better security
+        boolean rotateRefreshToken = true; // This could be configurable
+        String newRefreshToken = null;
+
+        if (rotateRefreshToken) {
+            // Revoke old token
+            token.setRevoked(true);
+            refreshTokenRepository.save(token);
+
+            // Generate new refresh token
+            newRefreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
+            saveRefreshToken(user.getId(), newRefreshToken);
+        }
+
+        return new AuthResponse(newAccessToken, newRefreshToken, user.getEmail(), user.getRole(),
+                jwtUtil.getAccessTokenExpiration() / 1000);
     }
 
     @Override
-    public UserResponse getCurrentUser(String username) {
-        User user = userRepository.findByUsernameAndNotDeleted(username)
+    public AuthUserResponse getCurrentUser(String email) {
+        AuthUser user = authUserRepository.findByEmailAndNotDeleted(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return mapToUserResponse(user);
@@ -158,18 +166,17 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.save(refreshToken);
     }
 
-    private UserResponse mapToUserResponse(User user) {
-        UserResponse response = new UserResponse();
-        response.setUserId(user.getUserId());
-        response.setUsername(user.getUsername());
-        response.setPhoneNumber(user.getPhoneNumber());
+    private AuthUserResponse mapToUserResponse(AuthUser user) {
+        AuthUserResponse response = new AuthUserResponse();
+        response.setId(user.getId());
+        response.setClientId(user.getClientId());
         response.setEmail(user.getEmail());
         response.setRole(user.getRole());
+        response.setEmployeeType(user.getEmployeeType());
+        response.setStatus(user.getStatus());
         response.setLastLogin(user.getLastLogin());
         response.setCreatedBy(user.getCreatedBy());
         response.setUpdatedBy(user.getUpdatedBy());
-        response.setBlockedBy(user.getBlockedBy());
-        response.setAccountStatus(user.getAccountStatus());
         response.setCreatedAt(user.getCreatedAt());
         response.setUpdatedAt(user.getUpdatedAt());
         return response;

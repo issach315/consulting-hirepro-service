@@ -1,5 +1,6 @@
 package com.hirepro.auth.filter;
 
+import com.hirepro.auth.util.CookieUtil;
 import com.hirepro.auth.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,9 +20,11 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final CookieUtil cookieUtil;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, CookieUtil cookieUtil) {
         this.jwtUtil = jwtUtil;
+        this.cookieUtil = cookieUtil;
     }
 
     @Override
@@ -29,10 +32,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
-            String authHeader = request.getHeader("Authorization");
+            String token = null;
 
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String token = authHeader.substring(7);
+            // First try to get token from cookie
+            if (cookieUtil.getAccessTokenFromCookie(request).isPresent()) {
+                token = cookieUtil.getAccessTokenFromCookie(request).get();
+            }
+            // Fallback to Authorization header (for backward compatibility)
+            else {
+                String authHeader = request.getHeader("Authorization");
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    token = authHeader.substring(7);
+                }
+            }
+
+            if (token != null) {
                 String username = jwtUtil.extractUsername(token);
 
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -52,7 +66,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            logger.error("Cannot set user authentication: {}", e);
+            logger.error("Cannot set user authentication: " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);

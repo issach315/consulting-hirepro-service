@@ -1,8 +1,7 @@
 package com.hirepro.auth.service;
 
-import com.hirepro.users.entity.User;
-import com.hirepro.users.enums.AccountStatus;
-import com.hirepro.users.repository.UserRepository;
+import com.hirepro.users.entity.AuthUser;
+import com.hirepro.users.repository.AuthUserRepository;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,19 +15,19 @@ import java.util.Collections;
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final UserRepository userRepository;
+    private final AuthUserRepository authUserRepository;
 
-    public UserDetailsServiceImpl(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public UserDetailsServiceImpl(AuthUserRepository authUserRepository) {
+        this.authUserRepository = authUserRepository;
     }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsernameAndNotDeleted(username)
+        AuthUser user = authUserRepository.findByEmailAndNotDeleted(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
         return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
+                user.getEmail(),
                 user.getPassword(),
                 isAccountActive(user),
                 true,
@@ -38,17 +37,17 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         );
     }
 
-    private boolean isAccountActive(User user) {
-        return user.getAccountStatus() == AccountStatus.ACTIVE;
+    private boolean isAccountActive(AuthUser user) {
+        return "ACTIVE".equals(user.getStatus());
     }
 
-    private boolean isAccountNotLocked(User user) {
-        return user.getAccountStatus() != AccountStatus.BLOCKED;
+    private boolean isAccountNotLocked(AuthUser user) {
+        return !"INACTIVE".equals(user.getStatus());
     }
 
-    private Collection<? extends GrantedAuthority> getAuthorities(User user) {
+    private Collection<? extends GrantedAuthority> getAuthorities(AuthUser user) {
         return Collections.singletonList(
-                new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+                new SimpleGrantedAuthority("ROLE_" + user.getRole())
         );
     }
 }

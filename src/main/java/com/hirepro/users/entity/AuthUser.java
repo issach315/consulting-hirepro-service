@@ -1,7 +1,5 @@
 package com.hirepro.users.entity;
 
-import com.hirepro.users.enums.AccountStatus;
-import com.hirepro.users.enums.UserRole;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -10,32 +8,31 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(name = "auth_users")
 @EntityListeners(AuditingEntityListener.class)
-public class User {
+public class AuthUser {
 
     @Id
-    @Column(name = "user_id", length = 26, nullable = false)
-    private String userId;
+    @Column(name = "id", length = 26, nullable = false)
+    private String id;
 
-    @Column(name = "username", length = 50, nullable = false, unique = true)
-    private String username;
-
-    @Column(name = "phone_number", length = 20, unique = true)
-    private String phoneNumber;
+    @Column(name = "client_id", length = 26)
+    private String clientId;
 
     @Column(name = "email", length = 100, nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password", nullable = false)
+    @Column(name = "password", length = 255, nullable = false)
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false)
-    private UserRole role;
+    @Column(name = "role", length = 30, nullable = false)
+    private String role;
 
-    @Column(name = "last_login")
-    private LocalDateTime lastLogin;
+    @Column(name = "employee_type", length = 20)
+    private String employeeType;
+
+    @Column(name = "status", length = 20, nullable = false)
+    private String status;
 
     @Column(name = "created_by", length = 26)
     private String createdBy;
@@ -43,12 +40,8 @@ public class User {
     @Column(name = "updated_by", length = 26)
     private String updatedBy;
 
-    @Column(name = "blocked_by", length = 26)
-    private String blockedBy;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "account_status", nullable = false)
-    private AccountStatus accountStatus;
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -62,43 +55,35 @@ public class User {
     private LocalDateTime deletedAt;
 
     // Constructors
-    public User() {
+    public AuthUser() {
     }
 
-    public User(String userId, String username, String phoneNumber, String email,
-                String password, UserRole role, AccountStatus accountStatus) {
-        this.userId = userId;
-        this.username = username;
-        this.phoneNumber = phoneNumber;
+    public AuthUser(String id, String clientId, String email, String password,
+                    String role, String employeeType, String status) {
+        this.id = id;
+        this.clientId = clientId;
         this.email = email;
         this.password = password;
         this.role = role;
-        this.accountStatus = accountStatus;
+        this.employeeType = employeeType;
+        this.status = status;
     }
 
     // Getters and Setters
-    public String getUserId() {
-        return userId;
+    public String getId() {
+        return id;
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId;
+    public void setId(String id) {
+        this.id = id;
     }
 
-    public String getUsername() {
-        return username;
+    public String getClientId() {
+        return clientId;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPhoneNumber() {
-        return phoneNumber;
-    }
-
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 
     public String getEmail() {
@@ -117,20 +102,28 @@ public class User {
         this.password = password;
     }
 
-    public UserRole getRole() {
+    public String getRole() {
         return role;
     }
 
-    public void setRole(UserRole role) {
+    public void setRole(String role) {
         this.role = role;
     }
 
-    public LocalDateTime getLastLogin() {
-        return lastLogin;
+    public String getEmployeeType() {
+        return employeeType;
     }
 
-    public void setLastLogin(LocalDateTime lastLogin) {
-        this.lastLogin = lastLogin;
+    public void setEmployeeType(String employeeType) {
+        this.employeeType = employeeType;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public String getCreatedBy() {
@@ -149,20 +142,12 @@ public class User {
         this.updatedBy = updatedBy;
     }
 
-    public String getBlockedBy() {
-        return blockedBy;
+    public LocalDateTime getLastLogin() {
+        return lastLogin;
     }
 
-    public void setBlockedBy(String blockedBy) {
-        this.blockedBy = blockedBy;
-    }
-
-    public AccountStatus getAccountStatus() {
-        return accountStatus;
-    }
-
-    public void setAccountStatus(AccountStatus accountStatus) {
-        this.accountStatus = accountStatus;
+    public void setLastLogin(LocalDateTime lastLogin) {
+        this.lastLogin = lastLogin;
     }
 
     public LocalDateTime getCreatedAt() {
